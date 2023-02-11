@@ -78,7 +78,25 @@ public class MainActivity extends Activity
 
                 YoloV5Ncnn.Obj[] objects = yolov5ncnn.Detect(yourSelectedImage, false);
 
-                showObjects(objects);
+                for (int i = 0; i < objects.length; i++)
+                {
+                    System.out.println("[check] object detection results: " + objects[i].label + " " + objects[i].prob);
+                    if (objects[i].label.equals("person"))
+                    {
+                        // crop the person
+                        System.out.println("[check] original image size: " + yourSelectedImage.getWidth() + ", " + yourSelectedImage.getHeight());
+                        System.out.println("[check] person detected, crop the person [x, y, w, h]: " + objects[i].x + ", " + objects[i].y + ", " + objects[i].w + ", " + objects[i].h);
+                        Bitmap person = Bitmap.createBitmap(yourSelectedImage.copy(Bitmap.Config.ARGB_8888, true), (int)objects[i].x, (int)objects[i].y, (int)objects[i].w, (int)objects[i].h);
+                        person = Bitmap.createScaledBitmap(person, 64, 64, true);
+//                        showSegment(person);
+//                        break;
+                        System.out.println("[check] start person segmentation " );
+                        Bitmap mask = yolov5ncnn.Segment(person, false);
+                        System.out.println("[check] person segmentation results: " + mask.getWidth() + ", " + mask.getHeight());
+                        showSegment(mask);
+                    }
+                }
+//                showObjects(objects);
             }
         });
 
@@ -91,9 +109,35 @@ public class MainActivity extends Activity
 
                 YoloV5Ncnn.Obj[] objects = yolov5ncnn.Detect(yourSelectedImage, true);
 
-                showObjects(objects);
+                for (int i = 0; i < objects.length; i++)
+                {
+                    System.out.println("[check] object detection results: " + objects[i].label + " " + objects[i].prob);
+                    if (objects[i].label.equals("person"))
+                    {
+                        // crop the person
+                        System.out.println("[check] original image size: " + yourSelectedImage.getWidth() + ", " + yourSelectedImage.getHeight());
+                        System.out.println("[check] person detected, crop the person [x, y, w, h]: " + objects[i].x + ", " + objects[i].y + ", " + objects[i].w + ", " + objects[i].h);
+                        Bitmap person = Bitmap.createBitmap(yourSelectedImage.copy(Bitmap.Config.ARGB_8888, true), (int)objects[i].x, (int)objects[i].y, (int)objects[i].w, (int)objects[i].h);
+                        person = Bitmap.createScaledBitmap(person, 64, 64, true);
+                        showSegment(person);
+                        break;
+//                        System.out.println("[check] start person segmentation " );
+//                        Bitmap mask = yolov5ncnn.Segment(person, false);
+//                        System.out.println("[check] person segmentation results: " + mask.getWidth() + ", " + mask.getHeight());
+//                        showSegment(mask);
+//                        break;
+                    }
+                }
+
+//                showObjects(objects);
             }
         });
+    }
+
+    private void showSegment(Bitmap person)
+    {
+        //show the person in the imageView
+        imageView.setImageBitmap(person);
     }
 
     private void showObjects(YoloV5Ncnn.Obj[] objects)

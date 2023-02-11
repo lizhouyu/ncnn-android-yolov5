@@ -7,7 +7,7 @@
   },
   {
     "level": "INFO",
-    "message": "- CMake found from cmake.dir at \u0027C:\\Users\\zhouyu\\AppData\\Local\\Android\\Sdk\\cmake\\3.10.2.4988404\u0027 had version \u00273.10.2\u0027",
+    "message": "- CMake found from cmake.dir at \u0027C:\\Users\\yuzho\\AppData\\Local\\Android\\Sdk\\cmake\\3.10.2.4988404\u0027 had version \u00273.10.2\u0027",
     "file": "E:\\Github\\ncnn-android-yolov5\\app\\src\\main\\jni\\CMakeLists.txt",
     "tag": "debug|arm64-v8a"
   },

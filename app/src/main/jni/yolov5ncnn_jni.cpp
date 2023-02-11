@@ -30,6 +30,7 @@ static ncnn::UnlockedPoolAllocator g_blob_pool_allocator;
 static ncnn::PoolAllocator g_workspace_pool_allocator;
 
 static ncnn::Net yolov5;
+static ncnn::Net unet;
 
 class YoloV5Focus : public ncnn::Layer
 {
@@ -321,8 +322,11 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_yolov5ncnn_YoloV5Ncnn_Init(JNIEnv* e
     AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
 
     yolov5.opt = opt;
+    unet.opt = opt;
 
     yolov5.register_custom_layer("YoloV5Focus", YoloV5Focus_layer_creator);
+
+    // load detection model
 
     // init param
     {
@@ -340,6 +344,25 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_yolov5ncnn_YoloV5Ncnn_Init(JNIEnv* e
         if (ret != 0)
         {
             __android_log_print(ANDROID_LOG_DEBUG, "YoloV5Ncnn", "load_model failed");
+            return JNI_FALSE;
+        }
+    }
+
+    // load segmentation model
+    {
+        int ret = unet.load_param(mgr, "unet.param");
+        if (ret != 0)
+        {
+            __android_log_print(ANDROID_LOG_DEBUG, "YoloV5Ncnn", "load unet param failed");
+            return JNI_FALSE;
+        }
+    }
+
+    {
+        int ret = unet.load_model(mgr, "unet.bin");
+        if (ret != 0)
+        {
+            __android_log_print(ANDROID_LOG_DEBUG, "YoloV5Ncnn", "load unet model failed");
             return JNI_FALSE;
         }
     }
@@ -549,6 +572,60 @@ JNIEXPORT jobjectArray JNICALL Java_com_tencent_yolov5ncnn_YoloV5Ncnn_Detect(JNI
     __android_log_print(ANDROID_LOG_DEBUG, "YoloV5Ncnn", "%.2fms   detect", elasped);
 
     return jObjArray;
+}
+
+// public native Obj Detect(Bitmap bitmap, boolean use_gpu);
+JNIEXPORT jobject JNICALL Java_com_tencent_yolov5ncnn_YoloV5Ncnn_Segment(JNIEnv* env, jobject thiz, jobject bitmap, jboolean use_gpu) {
+    if (use_gpu == JNI_TRUE && ncnn::get_gpu_count() == 0)
+        return NULL;
+
+    double start_time = ncnn::get_current_time();
+
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888)
+        return NULL;
+
+    ncnn::Mat in = ncnn::Mat::from_android_bitmap_resize(env, bitmap, ncnn::Mat::PIXEL_RGB, 64, 64);
+
+    #pragma omp parallel for num_threads(4)
+    for (int i = 0; i < in.w * in.h * in.c; i++) {
+        in[i] = in[i] / 255;
+    }
+
+    const float mean_vals[3] = {0.5f, 0.5f, 0.5f};
+    const float norm_vals[3] = {0.5f, 0.5f, 0.5f};
+    in.substract_mean_normalize(mean_vals, norm_vals);
+
+    // segmentation
+
+    ncnn::Mat out;
+
+    ncnn::Extractor ex = unet.create_extractor();
+
+    ex.set_vulkan_compute(use_gpu);
+
+    ex.input("input", in);
+
+    ex.extract("output", out);
+
+    __android_log_print(ANDROID_LOG_DEBUG, "YoloV5Ncnn", "[check]out size %d %d %d", out.w, out.h, out.c);
+
+
+    //round the output
+    #pragma omp parallel for num_threads(4)
+    for (int i = 0; i < out.w * out.h * out.c; i++) {
+        out[i] = round(out[i]);
+        out[i] = out[i] * 255;
+    }
+
+    out.to_android_bitmap(env, bitmap, ncnn::Mat::PIXEL_GRAY);
+
+    double elasped = ncnn::get_current_time() - start_time;
+    __android_log_print(ANDROID_LOG_DEBUG, "YoloV5Ncnn", "[check] %.2fms   segmentation", elasped);
+    __android_log_print(ANDROID_LOG_DEBUG, "YoloV5Ncnn", "[check] output bit map size %d %d %d", info.width, info.height);
+
+    return bitmap;
 }
 
 }

@@ -1,3 +1,7 @@
 ninja: Entering directory `E:\Github\ncnn-android-yolov5\app\.cxx\cmake\debug\arm64-v8a'
 [1/2] Building CXX object CMakeFiles/yolov5ncnn.dir/yolov5ncnn_jni.cpp.o
+E:/Github/ncnn-android-yolov5/app/src/main/jni/yolov5ncnn_jni.cpp:626:94: warning: more '%' conversions than data arguments [-Wformat-insufficient-args]
+    __android_log_print(ANDROID_LOG_DEBUG, "YoloV5Ncnn", "[check] output bit map size %d %d %d", info.width, info.height);
+                                                                                            ~^
+1 warning generated.
 [2/2] Linking CXX shared library E:\Github\ncnn-android-yolov5\app\build\intermediates\cmake\debug\obj\arm64-v8a\libyolov5ncnn.so
